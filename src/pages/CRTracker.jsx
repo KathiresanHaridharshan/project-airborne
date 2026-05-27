@@ -205,8 +205,8 @@ export default function CRTracker() {
     // End options
     standardOptions.push(
       { value: 'Rejected', label: 'Rejected' },
-      { value: 'Applied', label: 'Applied ⚠️' },
-      { value: 'Approved', label: 'Approved ⚠️' }
+      { value: 'Applied', label: 'Applied' },
+      { value: 'Approved', label: 'Approved' }
     );
 
     return standardOptions;
@@ -474,12 +474,12 @@ export default function CRTracker() {
                         )}
                         {isApproved && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#10b981', fontSize: '0.7rem', fontWeight: '600', marginTop: '0.4rem' }}>
-                            <CheckCircle size={10} /> ADMIN APPROVED ✓
+                            <CheckCircle size={10} /> ADMIN APPROVED
                           </div>
                         )}
                         {lead.adminRejected && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#ef4444', fontSize: '0.7rem', fontWeight: '600', marginTop: '0.4rem' }}>
-                            <AlertTriangle size={10} /> ADMIN REJECTED ✗
+                            <AlertTriangle size={10} /> ADMIN REJECTED
                           </div>
                         )}
                       </td>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Trophy, Phone, FileText, CheckCircle2, Users, Award, Radio } from 'lucide-react';
+import { Trophy, Phone, FileText, CheckCircle2, Users, Award, Radio, Target, Medal } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function PublicDashboard() {
@@ -311,8 +311,8 @@ export default function PublicDashboard() {
             Outreach. Innovation. Conversion. The battle of the ultimate sales outreach titans.
           </p>
           <div style={{ display: 'inline-flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <span className="badge badge-live" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}>
-              🎯 Arena Status: Active
+            <span className="badge badge-live" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Target size={16} /> Arena Status: Active
             </span>
           </div>
         </section>
@@ -332,7 +332,7 @@ export default function PublicDashboard() {
                   <div className="podium-team-name">{podiumTeams[1].name}</div>
                   <div className="podium-score">{podiumTeams[1].totalScore} pts</div>
                   <div className="podium-base">
-                    <span className="podium-medal">🥈</span>
+                    <span className="podium-medal"><Medal size={28} color="#9ca3af" /></span>
                     <span className="podium-rank-num">#2</span>
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function PublicDashboard() {
                   <div className="podium-team-name">{podiumTeams[0].name}</div>
                   <div className="podium-score">{podiumTeams[0].totalScore} pts</div>
                   <div className="podium-base">
-                    <span className="podium-medal">🥇</span>
+                    <span className="podium-medal"><Medal size={28} color="#fbbf24" /></span>
                     <span className="podium-rank-num">#1</span>
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export default function PublicDashboard() {
                   <div className="podium-team-name">{podiumTeams[2].name}</div>
                   <div className="podium-score">{podiumTeams[2].totalScore} pts</div>
                   <div className="podium-base">
-                    <span className="podium-medal">🥉</span>
+                    <span className="podium-medal"><Medal size={28} color="#b45309" /></span>
                     <span className="podium-rank-num">#3</span>
                   </div>
                 </div>
@@ -375,9 +375,9 @@ export default function PublicDashboard() {
               {sortedTeams.map((team, idx) => {
                 const percentage = Math.max(10, Math.min(100, (team.totalScore / topTeamScore) * 100));
                 let rankIcon = `#${idx + 1}`;
-                if (idx === 0) rankIcon = '🥇';
-                if (idx === 1) rankIcon = '🥈';
-                if (idx === 2) rankIcon = '🥉';
+                if (idx === 0) rankIcon = <Medal size={24} color="#fbbf24" />;
+                if (idx === 1) rankIcon = <Medal size={24} color="#9ca3af" />;
+                if (idx === 2) rankIcon = <Medal size={24} color="#b45309" />;
 
                 return (
                   <div key={team.id} style={{
@@ -604,7 +604,7 @@ export default function PublicDashboard() {
                       return (
                         <tr key={index} className={rowClass}>
                           <td style={{ fontWeight: '700' }}>
-                            {index === 0 ? '🥇 1st' : index === 1 ? '🥈 2nd' : index === 2 ? '🥉 3rd' : `#${index + 1}`}
+                            {index === 0 ? <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}><Medal size={16} color="#fbbf24"/> 1st</div> : index === 1 ? <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}><Medal size={16} color="#9ca3af"/> 2nd</div> : index === 2 ? <div style={{display:'flex',alignItems:'center',gap:'0.25rem'}}><Medal size={16} color="#b45309"/> 3rd</div> : `#${index + 1}`}
                           </td>
                           <td style={{ fontWeight: '600' }}>{ind.name}</td>
                           <td>{ind.teamName}</td>
