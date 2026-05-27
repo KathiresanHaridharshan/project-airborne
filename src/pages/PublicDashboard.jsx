@@ -4,7 +4,6 @@ import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Trophy, Phone, FileText, CheckCircle2, Users, Award, Radio, Target, Medal } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
 
 export default function PublicDashboard() {
   const [teams, setTeams] = useState([]);
@@ -276,9 +275,7 @@ export default function PublicDashboard() {
                 {timeLeft}
               </span>
             )}
-            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '0 0.5rem' }}></div>
-            <Link to="/cr-tracker" className="btn btn-secondary btn-sm" style={{ padding: '0.35rem 0.75rem', textDecoration: 'none' }}>CR Tracker</Link>
-            <Link to="/admin" className="btn btn-primary btn-sm" style={{ padding: '0.35rem 0.75rem', textDecoration: 'none' }}>Admin Console</Link>
+
           </div>
         </div>
       </header>

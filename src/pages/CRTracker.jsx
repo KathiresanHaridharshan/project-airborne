@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../firebase';
-import { collection, onSnapshot, doc, updateDoc, query, where } from 'firebase/firestore';
-import { LogOut, ArrowLeft, Search, Save, AlertTriangle, CheckCircle, Bell, RefreshCw } from 'lucide-react';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { LogOut, ArrowLeft, Search, AlertTriangle, CheckCircle, Bell, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function CRTracker() {
@@ -16,7 +16,8 @@ export default function CRTracker() {
   const [currentTeam, setCurrentTeam] = useState(null);
   const [leads, setLeads] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [savingRowId, setSavingRowId] = useState(null);
+  const [savingRowIds, setSavingRowIds] = useState(new Set());
+  const debounceTimers = useRef({});
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,47 +113,44 @@ export default function CRTracker() {
     toast.success("Logged out successfully");
   };
 
-  // Local state updater for individual lead inputs (so inputs remain fast without waiting for Firestore saves)
-  const handleLeadChange = (leadId, field, value) => {
-    setLeads(prevLeads =>
-      prevLeads.map(l => {
-        if (l.id === leadId) {
-          // If status changes to 'Applied' or 'Approved', reset approval flags
-          if (field === 'status') {
-            const isApprovalStatus = value === 'Applied' || value === 'Approved';
-            return { 
-              ...l, 
-              [field]: value, 
-              adminApproved: false,
-              adminRejected: false // Reset rejection notice on edit
-            };
-          }
-          return { ...l, [field]: value };
-        }
-        return l;
-      })
-    );
-  };
-
-  // Save changes to Firestore per row
-  const saveLeadChanges = async (lead) => {
-    setSavingRowId(lead.id);
+  // Core Firestore writer
+  const persistLead = useCallback(async (lead, updatedFields) => {
+    setSavingRowIds(prev => new Set([...prev, lead.id]));
     try {
-      const leadRef = doc(db, 'leads', lead.id);
-      await updateDoc(leadRef, {
-        approachedBy: lead.approachedBy || '',
-        status: lead.status || '—',
-        remarks: lead.remarks || '',
-        adminApproved: lead.adminApproved || false,
-        adminRejected: lead.adminRejected || false,
+      await updateDoc(doc(db, 'leads', lead.id), {
+        ...updatedFields,
         updatedAt: new Date()
       });
-      toast.success(`Changes saved for ${lead.firstName} ${lead.lastName}`);
     } catch (error) {
-      console.error("Error saving lead:", error);
-      toast.error("Failed to save changes");
+      console.error('Auto-save error:', error);
+      toast.error(error.message || 'Failed to save');
     } finally {
-      setSavingRowId(null);
+      setSavingRowIds(prev => { const next = new Set(prev); next.delete(lead.id); return next; });
+    }
+  }, []);
+
+  // Local state updater — then auto-saves
+  const handleLeadChange = (lead, field, value) => {
+    // Build updated lead for local state
+    let updatedLead;
+    if (field === 'status') {
+      updatedLead = { ...lead, [field]: value, adminApproved: false, adminRejected: false };
+    } else {
+      updatedLead = { ...lead, [field]: value };
+    }
+
+    setLeads(prev => prev.map(l => l.id === lead.id ? updatedLead : l));
+
+    if (field === 'remarks') {
+      // Debounce textarea: wait 800ms after user stops typing
+      if (debounceTimers.current[lead.id]) clearTimeout(debounceTimers.current[lead.id]);
+      debounceTimers.current[lead.id] = setTimeout(() => {
+        persistLead(updatedLead, { remarks: value });
+      }, 800);
+    } else if (field === 'status') {
+      persistLead(updatedLead, { status: value, adminApproved: false, adminRejected: false });
+    } else {
+      persistLead(updatedLead, { [field]: value });
     }
   };
 
@@ -406,7 +404,7 @@ export default function CRTracker() {
                 <th style={{ width: '180px' }}>Approached By</th>
                 <th style={{ width: '180px' }}>Outreach Status</th>
                 <th>Remarks / Notes</th>
-                <th style={{ width: '100px', textAlign: 'center' }}>Action</th>
+                <th style={{ width: '60px', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -438,7 +436,7 @@ export default function CRTracker() {
                         <select
                           className="input-field"
                           value={lead.approachedBy || ''}
-                          onChange={(e) => handleLeadChange(lead.id, 'approachedBy', e.target.value)}
+                          onChange={(e) => handleLeadChange(lead, 'approachedBy', e.target.value)}
                           style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem', width: '100%' }}
                         >
                           <option value="">-- Assigned Member --</option>
@@ -452,7 +450,7 @@ export default function CRTracker() {
                         <select
                           className="input-field"
                           value={lead.status || '—'}
-                          onChange={(e) => handleLeadChange(lead.id, 'status', e.target.value)}
+                          onChange={(e) => handleLeadChange(lead, 'status', e.target.value)}
                           style={{ 
                             padding: '0.5rem 0.75rem', 
                             fontSize: '0.85rem', 
@@ -489,7 +487,7 @@ export default function CRTracker() {
                           className="input-field"
                           placeholder="Add call notes, conversation summary, next steps..."
                           value={lead.remarks || ''}
-                          onChange={(e) => handleLeadChange(lead.id, 'remarks', e.target.value)}
+                          onChange={(e) => handleLeadChange(lead, 'remarks', e.target.value)}
                           rows={1}
                           style={{ 
                             padding: '0.5rem 0.75rem', 
@@ -502,29 +500,13 @@ export default function CRTracker() {
                         />
                       </td>
 
-                      <td style={{ verticalAlign: 'top', textAlign: 'center' }}>
-                        <button
-                          onClick={() => saveLeadChanges(lead)}
-                          disabled={savingRowId === lead.id}
-                          className="btn btn-primary"
-                          style={{ 
-                            padding: '0.5rem 0.8rem', 
-                            width: '100%', 
-                            height: '38px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            opacity: savingRowId === lead.id ? 0.7 : 1
-                          }}
-                        >
-                          {savingRowId === lead.id ? (
-                            <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                          ) : (
-                            <>
-                              <Save size={14} /> Save
-                            </>
-                          )}
-                        </button>
+                      <td style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        {savingRowIds.has(lead.id) && (
+                          <Loader2
+                            size={16}
+                            style={{ animation: 'spin 1s linear infinite', color: 'var(--color-primary)', opacity: 0.7 }}
+                          />
+                        )}
                       </td>
                     </tr>
                   );
