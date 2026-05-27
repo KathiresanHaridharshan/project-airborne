@@ -159,7 +159,7 @@ export default function AdminPanel() {
       setShowTeamModal(false);
     } catch (err) {
       console.error(err);
-      toast.error("Operation failed");
+      toast.error(err.message || "Operation failed");
     }
   };
 
@@ -170,7 +170,7 @@ export default function AdminPanel() {
         toast.success(`Team "${name}" decommissioned`);
       } catch (err) {
         console.error(err);
-        toast.error("Decommission failed");
+        toast.error(err.message || "Decommission failed");
       }
     }
   };
@@ -203,7 +203,7 @@ export default function AdminPanel() {
       toast.success(`${newMemberName} added to roster`);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to add member");
+      toast.error(err.message || "Failed to add member");
     }
   };
 
@@ -221,7 +221,7 @@ export default function AdminPanel() {
         toast.success(`${memberName} discharged from roster`);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to remove member");
+        toast.error(err.message || "Failed to remove member");
       }
     }
   };
@@ -311,10 +311,6 @@ export default function AdminPanel() {
       toast.error("No leads to import");
       return;
     }
-    if (!allocateImportTeamId) {
-      toast.error("Please allocate these leads to a team");
-      return;
-    }
 
     try {
       const batch = writeBatch(db);
@@ -326,7 +322,7 @@ export default function AdminPanel() {
           lastName: lead.lastName,
           email: lead.email,
           contactNumber: lead.contactNumber,
-          allocatedTeam: allocateImportTeamId,
+          allocatedTeam: allocateImportTeamId || '',
           approachedBy: '',
           status: '—',
           remarks: '',
@@ -338,7 +334,11 @@ export default function AdminPanel() {
       });
 
       await batch.commit();
-      toast.success(`Imported and allocated ${parsedPreviewLeads.length} leads successfully!`);
+      if (allocateImportTeamId) {
+        toast.success(`Imported and allocated ${parsedPreviewLeads.length} leads successfully!`);
+      } else {
+        toast.success(`Imported ${parsedPreviewLeads.length} leads as unassigned!`);
+      }
       
       // Reset
       setParsedPreviewLeads([]);
@@ -346,7 +346,7 @@ export default function AdminPanel() {
       if (fileInputRef) fileInputRef.value = '';
     } catch (err) {
       console.error(err);
-      toast.error("Import operation failed");
+      toast.error(err.message || "Import operation failed");
     }
   };
 
@@ -364,7 +364,7 @@ export default function AdminPanel() {
       toast.success("Lead reallocated successfully");
     } catch (err) {
       console.error(err);
-      toast.error("Allocation change failed");
+      toast.error(err.message || "Allocation change failed");
     }
   };
 
@@ -376,7 +376,7 @@ export default function AdminPanel() {
         toast.success(`Lead "${name}" deleted`);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to delete lead");
+        toast.error(err.message || "Failed to delete lead");
       }
     }
   };
@@ -450,7 +450,7 @@ export default function AdminPanel() {
       toast.success("Points Matrix updated live!");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update points config");
+      toast.error(err.message || "Failed to update points config");
     }
   };
 
@@ -467,7 +467,7 @@ export default function AdminPanel() {
       toast.success("Lead conversion approved!");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to approve");
+      toast.error(err.message || "Failed to approve");
     }
   };
 
@@ -482,7 +482,7 @@ export default function AdminPanel() {
       toast.success("Lead reverted. Team notified.");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to reject");
+      toast.error(err.message || "Failed to reject");
     }
   };
 
@@ -501,13 +501,15 @@ export default function AdminPanel() {
       toast.success(`Bulk approved ${pendingLeads.length} entries!`);
     } catch (err) {
       console.error(err);
-      toast.error("Bulk approval failed");
+      toast.error(err.message || "Bulk approval failed");
     }
   };
 
   // Filter main leads lists
   const filteredMainLeads = leads.filter(l => {
-    const matchTeam = filterTeamId ? l.allocatedTeam === filterTeamId : true;
+    const matchTeam = filterTeamId 
+      ? (filterTeamId === 'unassigned' ? (!l.allocatedTeam || l.allocatedTeam === 'unassigned') : l.allocatedTeam === filterTeamId)
+      : true;
     const matchStatus = filterStatus ? l.status === filterStatus : true;
     return matchTeam && matchStatus;
   });
@@ -1045,7 +1047,7 @@ export default function AdminPanel() {
                         onChange={(e) => setAllocateImportTeamId(e.target.value)}
                         style={{ margin: 0, fontSize: '0.85rem' }}
                       >
-                        <option value="">-- Choose Target Team --</option>
+                        <option value="">-- Keep Unassigned (Assign Later) --</option>
                         {teams.map(t => (
                           <option key={t.id} value={t.id}>{t.name} ({t.type})</option>
                         ))}
@@ -1085,6 +1087,7 @@ export default function AdminPanel() {
                     style={{ margin: 0 }}
                   >
                     <option value="">-- All Teams --</option>
+                    <option value="unassigned">-- Unassigned Leads --</option>
                     {teams.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
@@ -1143,10 +1146,11 @@ export default function AdminPanel() {
                           <td>
                             <select
                               className="input-field"
-                              value={lead.allocatedTeam}
+                              value={lead.allocatedTeam || ''}
                               onChange={(e) => handleLeadReallocation(lead.id, e.target.value)}
                               style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', width: '100%', margin: 0 }}
                             >
+                              <option value="">-- Unassigned --</option>
                               {teams.map(t => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                               ))}
